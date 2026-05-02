@@ -1,0 +1,138 @@
+name: go-safe-agent-gateway
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: go-agent-app
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      GIN_MODE: ${GIN_MODE:-release}
+      HTTP_ADDR: :8080
+      GATEWAY_API_KEY: ${GATEWAY_API_KEY:-}
+      MAX_BODY_BYTES: ${MAX_BODY_BYTES:-1048576}
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-}
+      MYSQL_DSN: ${MYSQL_USER:-go_agent}:${MYSQL_PASSWORD:-go_agent_pass}@tcp(mysql:3306)/${MYSQL_DATABASE:-go_agent}?parseTime=true
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-go_agent_redis}
+      REDIS_DB: ${REDIS_DB:-0}
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: ${QDRANT_COLLECTION:-agent_documents}
+      EMBEDDING_DIMENSION: ${EMBEDDING_DIMENSION:-64}
+      RAG_SCORE_THRESHOLD: ${RAG_SCORE_THRESHOLD:-0.10}
+      ENABLE_MOCK_LLM: ${ENABLE_MOCK_LLM:-true}
+      ENABLE_MOCK_EMBEDDING: ${ENABLE_MOCK_EMBEDDING:-true}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.deepseek.com/v1}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-deepseek-chat}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+      RATE_LIMIT_FAIL_CLOSED: ${RATE_LIMIT_FAIL_CLOSED:-false}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-60}
+      TOOL_DEFAULT_TIMEOUT_MS: ${TOOL_DEFAULT_TIMEOUT_MS:-5000}
+      MAX_SQL_ROWS: ${MAX_SQL_ROWS:-100}
+      URL_ALLOWLIST: ${URL_ALLOWLIST:-example.com,httpbin.org,api.github.com}
+      ASYNC_WORKERS: ${ASYNC_WORKERS:-2}
+      ASYNC_QUEUE_SIZE: ${ASYNC_QUEUE_SIZE:-32}
+    ports:
+      - "${HTTP_PORT:-8080}:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/app/server", "healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  mysql:
+    image: mysql:8.0
+    container_name: go-agent-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-go_agent_root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-go_agent}
+      MYSQL_USER: ${MYSQL_USER:-go_agent}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-go_agent_pass}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - go_agent_mysql_data:/var/lib/mysql
+      - ../migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u${MYSQL_USER:-go_agent}", "-p${MYSQL_PASSWORD:-go_agent_pass}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: go-agent-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-go_agent_redis}"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - go_agent_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-go_agent_redis}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: go-agent-qdrant
+    restart: unless-stopped
+    ports:
+      - "${QDRANT_HTTP_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
+    volumes:
+      - go_agent_qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "bash", "-lc", "timeout 2 bash -c '</dev/tcp/127.0.0.1/6333'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: go-agent-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - go_agent_prometheus_data:/prometheus
+    depends_on:
+      - app
+
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: go-agent-caddy
+    restart: unless-stopped
+    ports:
+      - "${PUBLIC_HTTP_PORT:-8081}:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - go_agent_caddy_data:/data
+      - go_agent_caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  go_agent_mysql_data:
+  go_agent_redis_data:
+  go_agent_qdrant_data:
+  go_agent_prometheus_data:
+  go_agent_caddy_data:
+  go_agent_caddy_config:

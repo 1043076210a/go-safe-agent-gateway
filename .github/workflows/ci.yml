@@ -1,0 +1,22 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - run: gofmt -w .
+      - run: git diff --exit-code
+      - run: go test ./...
+      - run: go vet ./...
+      - run: docker compose --env-file .env.example -f deployments/docker-compose.yml config --quiet
+      - run: docker compose --env-file .env.prod.example -f deployments/docker-compose.prod.yml config --quiet
+      - run: docker build -t go-safe-agent-gateway:ci .

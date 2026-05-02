@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+!.env.prod.example
+
+.tmp/
+.tmp-server.pid
+demo-output/
+go-safe-agent-gateway-codex-skill/
+
+*.exe
+*.test
+coverage.out
+
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,15 @@
+.env
+.env.*
+.tmp
+.tmp-server.pid
+demo-output
+go-safe-agent-gateway-codex-skill
+
+*.exe
+*.test
+coverage.out
+
+.git
+.github
+.idea
+.vscode
