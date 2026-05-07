@@ -51,6 +51,9 @@ services:
   caddy:
     image: caddy:2.8-alpine
     restart: unless-stopped
+    environment:
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:-:80}
+      GATEWAY_API_KEY: ${GATEWAY_API_KEY:?GATEWAY_API_KEY is required}
     ports:
       - "${PUBLIC_HTTP_PORT:-80}:80"
       - "${PUBLIC_HTTPS_PORT:-443}:443"
