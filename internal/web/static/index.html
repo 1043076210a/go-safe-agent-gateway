@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Go Safe Agent Gateway Demo</title>
+    <link rel="stylesheet" href="/demo/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">LLM Agent 安全工具调用网关</p>
+        <h1>Go Safe Agent Gateway</h1>
+      </div>
+      <div class="status-strip">
+        <span id="health-dot" class="dot muted"></span>
+        <span id="health-text">未检查</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel controls">
+        <div class="section-head">
+          <div>
+            <h2>连接配置</h2>
+            <p>公开演示时建议设置 API Key，本地为空也可以直接测试。</p>
+          </div>
+          <button id="btn-health" class="secondary">检查</button>
+        </div>
+        <label>
+          Base URL
+          <input id="base-url" autocomplete="off" spellcheck="false" />
+        </label>
+        <label>
+          Gateway API Key
+          <input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="本地未启用鉴权时可留空" />
+        </label>
+        <div class="button-row">
+          <button id="btn-save-key">保存配置</button>
+          <button id="btn-tools" class="secondary">刷新工具</button>
+        </div>
+        <div class="tools-list" id="tools-list"></div>
+      </section>
+
+      <section class="panel demo">
+        <div class="section-head">
+          <div>
+            <h2>核心链路演示</h2>
+            <p>按顺序执行可以看到：文档入库、向量检索、工具执行、策略拒绝、异步审计。</p>
+          </div>
+          <button id="btn-run-all">一键演示</button>
+        </div>
+
+        <div class="grid">
+          <article class="action">
+            <h3>1. 写入知识库</h3>
+            <textarea id="doc-content" rows="7"># Policy Engine
+The gateway validates tool permission, SQL safety, URL allowlists, sensitive masking, rate limits, timeout isolation, audit logs, and metrics before executing backend tools.
+
+# Qdrant Search
+Knowledge base search stores Markdown chunks as vectors in Qdrant and returns citation metadata with document id, source path, chunk index, and score.</textarea>
+            <button id="btn-index">写入 Qdrant</button>
+          </article>
+
+          <article class="action">
+            <h3>2. 语义检索</h3>
+            <input id="search-query" value="policy permission rate limits qdrant metadata" spellcheck="false" />
+            <button id="btn-search">执行 search_knowledge_base</button>
+          </article>
+
+          <article class="action">
+            <h3>3. 工具执行</h3>
+            <input id="calc-expression" value="2 + 3 * (4 - 1)" spellcheck="false" />
+            <button id="btn-calc">执行 calculator</button>
+          </article>
+
+          <article class="action">
+            <h3>4. 安全拒绝</h3>
+            <input id="blocked-sql" value="DELETE FROM sessions" spellcheck="false" />
+            <button id="btn-reject">触发 SQL 策略拒绝</button>
+          </article>
+
+          <article class="action">
+            <h3>5. 异步审计</h3>
+            <select id="log-kind">
+              <option value="tool_calls">tool_calls</option>
+              <option value="policy_rejects">policy_rejects</option>
+            </select>
+            <button id="btn-async">提交 query_logs 异步任务</button>
+          </article>
+
+          <article class="action">
+            <h3>6. 直接审计查询</h3>
+            <div class="button-row">
+              <button id="btn-audit-tools" class="secondary">工具审计</button>
+              <button id="btn-audit-rejects" class="secondary">拒绝记录</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel output-panel">
+        <div class="section-head">
+          <div>
+            <h2>执行结果</h2>
+            <p>所有请求都会通过真实后端 API，而不是页面内模拟。</p>
+          </div>
+          <button id="btn-clear" class="secondary">清空</button>
+        </div>
+        <div id="timeline" class="timeline"></div>
+      </section>
+    </main>
+
+    <script src="/demo/app.js"></script>
+  </body>
+</html>

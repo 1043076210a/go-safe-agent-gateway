@@ -96,6 +96,14 @@ LLM_MODEL=deepseek-chat
 
 ## 常用接口
 
+内置 Demo 控制台：
+
+```text
+http://127.0.0.1:8080/demo
+```
+
+它可以直接演示健康检查、工具列表、文档入库、Qdrant 检索、计算器、策略拒绝、异步审计查询和审计日志展示。演示步骤见 [docs/demo-guide.md](docs/demo-guide.md)。
+
 健康检查：
 
 ```powershell

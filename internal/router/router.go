@@ -7,6 +7,7 @@ import (
 	"go-safe-agent-gateway/internal/handler"
 	"go-safe-agent-gateway/internal/middleware"
 	"go-safe-agent-gateway/internal/observability"
+	"go-safe-agent-gateway/internal/web"
 )
 
 type Options struct {
@@ -21,6 +22,7 @@ func New(h *handler.Handler, metrics *observability.Metrics, opts Options) *gin.
 	r.Use(middleware.BodyLimit(opts.MaxBodyBytes))
 	r.Use(middleware.CORS(opts.CORSAllowOrigins))
 	r.Use(middleware.Metrics(metrics))
+	web.Register(r)
 	r.GET("/health", h.Health)
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
