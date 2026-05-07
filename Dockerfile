@@ -6,7 +6,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server
 
-FROM gcr.io/distroless/static-debian12:latest
+FROM golang:1.26
 WORKDIR /app
 COPY --from=build /out/server /app/server
 EXPOSE 8080
